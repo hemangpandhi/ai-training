@@ -99,7 +99,7 @@ def main():
         use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
-        max_length=512,
+        max_seq_length=512,
     )
 
     trainer = SFTTrainer(
