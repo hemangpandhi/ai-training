@@ -32,7 +32,8 @@ This repository provides an end-to-end, production-ready pipeline for fine-tunin
 │   ├── 03_export_litert_lm.py             # Step 3: Export HuggingFace Model to LiteRT TFLite
 │   ├── 04_fix_subgraphs_and_signatures.py # Step 4: Fix Subgraph Array & SignatureDef FlatBuffer Offsets
 │   ├── 05_build_and_pack_container.py     # Step 5: Assemble model.toml & Pack MTP .litertlm Bundle
-│   └── 06_android_ui_automation.py        # Step 6: Automated ADB UI Verification & Model Loader
+│   ├── 06_android_ui_automation.py        # Step 6: Automated ADB UI Verification & Model Loader
+│   └── 07_inject_weights_into_baseline.py # Utility 7: Direct Weight Buffer Transposition into Baseline Model
 └── docs/
     ├── ARCHITECTURE_AND_SPECIFICATIONS.md  # Detailed LiteRT Container & Section Specifications
     ├── LITERT_TORCH_FRAMEWORK_PATCHES.md   # Explanation of litert-torch Exporter Executable Patches
@@ -86,7 +87,8 @@ Export the merged HuggingFace model using `litert-torch`:
 ```bash
 python scripts/03_export_litert_lm.py \
   --model_dir=gemma4_hf_merged \
-  --output_dir=litert_export
+  --output_dir=litert_export \
+  --target_backend=gpu
 ```
 
 ### 5. Phase 4: Re-order FlatBuffer Subgraphs & SignatureDefs
