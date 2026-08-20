@@ -7,7 +7,7 @@ import argparse
 import torch
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig
 from trl import SFTConfig, SFTTrainer
 
 SYSTEM_PROMPT_TEMPLATE = """CORE IDENTITY:
@@ -75,9 +75,6 @@ def main():
         task_type="CAUSAL_LM"
     )
 
-    model = get_peft_model(model, peft_config)
-    model.print_trainable_parameters()
-
     sft_config = SFTConfig(
         output_dir=args.output_dir,
         per_device_train_batch_size=args.batch_size,
@@ -104,7 +101,7 @@ def main():
     print("\nStarting LoRA Fine-Tuning...")
     trainer.train()
 
-    model.save_pretrained(args.output_dir)
+    trainer.model.save_pretrained(args.output_dir)
     tokenizer.save_pretrained(args.output_dir)
     print(f"\n✅ Fine-tuning complete! LoRA adapters saved to: {args.output_dir}")
 
