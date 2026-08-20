@@ -49,10 +49,13 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
     tokenizer.pad_token = tokenizer.eos_token
 
+    is_cuda = torch.cuda.is_available()
+    torch_dtype = torch.float16 if is_cuda else torch.float32
+
     model = AutoModelForCausalLM.from_pretrained(
         args.model_id,
-        torch_dtype=torch.bfloat16,
-        device_map="auto"
+        dtype=torch_dtype,
+        device_map="auto" if is_cuda else "cpu"
     )
 
     # Explicitly target language_model attention and MLP projection layers for Gemma 4
@@ -83,8 +86,9 @@ def main():
         num_train_epochs=args.epochs,
         logging_steps=10,
         save_strategy="epoch",
-        fp16=False,
-        bf16=True,
+        fp16=is_cuda,
+        bf16=False,
+        use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
         max_length=512,
