@@ -7,7 +7,7 @@ import argparse
 import torch
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import LoraConfig, prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model
 from trl import SFTConfig, SFTTrainer
 
 SYSTEM_PROMPT_TEMPLATE = """CORE IDENTITY:
@@ -71,7 +71,6 @@ def main():
     )
 
     if is_cuda:
-        model = prepare_model_for_kbit_training(model)
         model.gradient_checkpointing_enable()
 
     # Explicitly target language_model attention and MLP projection layers for Gemma 4
@@ -94,6 +93,9 @@ def main():
         task_type="CAUSAL_LM"
     )
 
+    model = get_peft_model(model, peft_config)
+    model.print_trainable_parameters()
+
     sft_config = SFTConfig(
         output_dir=args.output_dir,
         per_device_train_batch_size=args.batch_size,
@@ -115,7 +117,6 @@ def main():
     trainer = SFTTrainer(
         model=model,
         train_dataset=formatted_dataset,
-        peft_config=peft_config,
         processing_class=tokenizer,
         args=sft_config,
     )
