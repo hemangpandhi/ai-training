@@ -1,5 +1,5 @@
 """
-Phase 1: Fine-Tuning Google Gemma 4-E2B with PEFT LoRA (TRL 1.10.0 SFTConfig API)
+Phase 1: Fine-Tuning Google Gemma 4-E2B with PEFT LoRA (GPU Accelerated - RTX 4070)
 """
 
 import os
@@ -50,7 +50,10 @@ def main():
     tokenizer.pad_token = tokenizer.eos_token
 
     is_cuda = torch.cuda.is_available()
-    torch_dtype = torch.float16 if is_cuda else torch.float32
+    device_name = torch.cuda.get_device_name(0) if is_cuda else "CPU"
+    print(f"🚀 Hardware Acceleration: {'CUDA GPU (' + device_name + ')' if is_cuda else 'CPU Host'}")
+
+    torch_dtype = torch.bfloat16 if (is_cuda and torch.cuda.is_bf16_supported()) else (torch.float16 if is_cuda else torch.float32)
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_id,
@@ -86,8 +89,8 @@ def main():
         num_train_epochs=args.epochs,
         logging_steps=10,
         save_strategy="epoch",
-        fp16=is_cuda,
-        bf16=False,
+        fp16=(is_cuda and not torch.cuda.is_bf16_supported()),
+        bf16=(is_cuda and torch.cuda.is_bf16_supported()),
         use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
