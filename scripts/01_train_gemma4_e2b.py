@@ -49,9 +49,6 @@ def main():
 
     dataset = load_dataset("json", data_files=args.dataset_path)
     train_data = dataset["train"].shuffle(seed=42)
-    if len(train_data) > 10000:
-        train_data = train_data.select(range(10000))
-        print(f"Sampled 10,000 diverse automotive items from {len(dataset['train']):,} total items for GPU memory efficiency.")
 
     formatted_dataset = train_data.map(format_prompts, batched=True)
 
@@ -65,7 +62,7 @@ def main():
     if is_cuda:
         torch.cuda.empty_cache()
 
-    # 4-bit NormalFloat quantization config for ~5.2 GB total VRAM usage
+    # 4-bit NormalFloat quantization config for ~4.8 GB total VRAM usage
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
@@ -82,15 +79,11 @@ def main():
     if is_cuda:
         model.gradient_checkpointing_enable()
 
-    # Explicitly target language_model attention and MLP projection layers for Gemma 4
+    # Explicitly target language_model attention projection layers for Gemma 4 (5.35M params)
     target_modules = [
         f"language_model.layers.{i}.self_attn.{proj}"
         for i in range(35)
         for proj in ["q_proj", "k_proj", "v_proj", "o_proj"]
-    ] + [
-        f"language_model.layers.{i}.mlp.{proj}"
-        for i in range(35)
-        for proj in ["gate_proj", "up_proj", "down_proj"]
     ]
 
     peft_config = LoraConfig(
@@ -110,7 +103,7 @@ def main():
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=8,
         gradient_checkpointing=True,
-        optim="paged_adamw_8bit" if is_cuda else "adamw_torch",
+        optim="adamw_torch_fused" if is_cuda else "adamw_torch",
         learning_rate=args.lr,
         num_train_epochs=args.epochs,
         max_steps=args.max_steps,
@@ -121,7 +114,7 @@ def main():
         use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
-        max_seq_length=96,
+        max_seq_length=128,
     )
 
     trainer = SFTTrainer(
