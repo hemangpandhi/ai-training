@@ -1,14 +1,14 @@
 """
-Phase 1: Fine-Tuning Google Gemma 4-E2B with PEFT LoRA
+Phase 1: Fine-Tuning Google Gemma 4-E2B with PEFT LoRA (TRL 1.10.0 SFTConfig API)
 """
 
 import os
 import argparse
 import torch
 from datasets import load_dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model
-from trl import SFTTrainer
+from trl import SFTConfig, SFTTrainer
 
 SYSTEM_PROMPT_TEMPLATE = """CORE IDENTITY:
 You are the driver's smart in-car AI Assistant and co-pilot. You help with vehicle controls (AC, temperature, windows, seat heaters, defrosters), navigation, music playback, phone calls, vehicle diagnostics, and travel suggestions. NEVER refer to yourself as a generic large language model or describe text processing algorithms.
@@ -78,7 +78,7 @@ def main():
     model = get_peft_model(model, peft_config)
     model.print_trainable_parameters()
 
-    training_args = TrainingArguments(
+    sft_config = SFTConfig(
         output_dir=args.output_dir,
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=4,
@@ -88,17 +88,17 @@ def main():
         save_strategy="epoch",
         fp16=False,
         bf16=True,
-        report_to="none"
+        report_to="none",
+        dataset_text_field="text",
+        max_length=512,
     )
 
     trainer = SFTTrainer(
         model=model,
         train_dataset=formatted_dataset,
         peft_config=peft_config,
-        dataset_text_field="text",
-        max_seq_length=512,
-        tokenizer=tokenizer,
-        args=training_args,
+        processing_class=tokenizer,
+        args=sft_config,
     )
 
     print("\nStarting LoRA Fine-Tuning...")
