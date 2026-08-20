@@ -1,6 +1,6 @@
 # LiteRT Container Architecture, Section Manifest & FlatBuffer Specifications
 
-This document provides a comprehensive technical reference for the `.litertlm` container bundle format, section declarations in `model.toml`, FlatBuffer binary offsets, and OpenCL GPU delegate rules for **Google Gemma 4-E2B** on Android.
+This document provides a comprehensive technical reference for the `.litertlm` container bundle format, section declarations in `model.toml`, FlatBuffer binary offsets, heterogeneous layer architecture handling, and OpenCL GPU delegate rules for **Google Gemma 4-E2B** on Android.
 
 ---
 
@@ -52,6 +52,19 @@ data_path = "Section11_TFLiteModel_tf_lite_mtp_drafter.tflite"
 1. **Section Key `model_type`**: Must match `"prefill_decode"` for Section 10. `LLMManager.kt` explicitly checks for container section key `"prefill_decode"`.
 2. **Backend Constraints**: **DO NOT** add `backend_constraint = "gpu_artisan"` unless exporting a specialized artisan binary. Adding `gpu_artisan` constraint causes standard OpenCL GPU initialization to fail with `Model requires one of [gpu_artisan] but Main backend is GPU`.
 3. **Embedder Sections**: `Section 2` (`embedder`) and `Section 3` (`per_layer_embedder`) must contain **EXACTLY 1 SUBGRAPH** (`Subgraph 0: main`). Multi-bucket embedder subgraphs cause `Signature has incorrect number of input/outputs` during C++ model loading.
+
+---
+
+## 🏛️ Heterogeneous Layer Architecture & Static Weight Alignment
+
+Google Gemma 4-E2B utilizes a **heterogeneous multimodal transformer architecture**:
+- **Attention Heterogeneity**: Alternates between full global attention layers and local sliding-window / per-layer embedding projection layers.
+- **Static vs Dynamic Shapes**: Weight matrices (`[vocab_size, hidden_dim]`, projection weights) remain **static in shape across sequence buckets**, whereas activation KV-caches (`[1, seq_len, num_heads, head_dim]`) scale dynamically.
+
+### How Static Weight Shape Mismatch Was Fixed
+1. **Un-prefixed Tensor Canonicalization**: In standard `litert-torch` exports, static weight tensors received sequence-length-dependent names (e.g. `prefill_128_weight_0`). We injected `_canonicalize_tensor_name()` in `litert_converter.py` so that all static weight tensors across all 6 subgraphs resolve to unified, static FlatBuffer `Buffer ID` references.
+2. **JAX Tensor Shape Padding**: Added shape padding logic to `_aten_add_tensor()` in `lowerings.py` to prevent static weight dimension broadcast errors during MLIR ATen lowerings.
+3. **Weight Buffer Transposition (`scripts/07_inject_weights_into_baseline.py`)**: For fine-tuned weights, the transposition utility extracts static weight byte buffers by tensor name (`fine_weight_data[name]`) and writes them directly into the baseline model's FlatBuffer memory positions, preserving exact static shape metadata and heterogeneous layer layouts.
 
 ---
 
