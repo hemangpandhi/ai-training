@@ -38,7 +38,7 @@ def format_prompts(batch):
                                    batch["output"]):
         u_text = user_inp if user_inp else inst
         text = f"<bos><start_of_turn>user\n{SYSTEM_PROMPT_TEMPLATE.format(user_input=u_text, output='')}<end_of_turn>\n<start_of_turn>model\n{out}<end_of_turn><eos>"
-        formatted.append(text)
+        formatted.append(text[:380])
     return {"text": formatted}
 
 def main():
@@ -114,7 +114,7 @@ def main():
         use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
-        max_seq_length=128,
+        max_seq_length=96,
     )
 
     trainer = SFTTrainer(
