@@ -107,7 +107,7 @@ Assemble `model.toml`, sentencepiece tokenizer, single-subgraph embedders, and M
 ```bash
 python scripts/05_build_and_pack_container.py \
   --bundle_dir=litert_export \
-  --official_baseline_container=/path/to/gemma-4-E2B-it.litertlm \
+  --official_baseline_container=/path/to/gemma-4-E2B-it-gpu.litertlm \
   --output_path=in_car_assistant_gemma4_e2b_pixel_int4.litertlm
 ```
 
@@ -135,10 +135,10 @@ See [`docs/LITERT_TORCH_FRAMEWORK_PATCHES.md`](docs/LITERT_TORCH_FRAMEWORK_PATCH
 
 ## 📊 Optimization & Performance Specs
 
-| Metric | Base Model (FP16) | Optimized Container (INT4 + MTP) |
+| Metric | Unoptimized Base | Complete Fine-Tuned MTP Bundle |
 | :--- | :--- | :--- |
-| **Model Container Size** | 2.58 GB | **1.80 GB** *(INT8 Embeddings)* |
-| **Speculative Decoding** | ❌ None | **✅ 3-Token Parallel MTP Drafter** |
+| **Model Container Size** | ~4.8 GB (FP16) | **~2.5 GiB / 2.7 GB** *(INT4 Weights + MTP Drafter)* |
+| **Speculative Decoding** | ❌ None | **✅ 3-Token Parallel MTP Drafter Head** |
 | **TTFT Latency** | ~690 ms | **< 380 ms** |
 | **Generation TPS** | ~7.5 TPS | **22 – 25 TPS ⚡** |
 
