@@ -49,6 +49,9 @@ def main():
 
     dataset = load_dataset("json", data_files=args.dataset_path)
     train_data = dataset["train"].shuffle(seed=42)
+    if len(train_data) > 10000:
+        train_data = train_data.select(range(10000))
+        print(f"Sampled 10,000 diverse automotive items from {len(dataset['train']):,} total items for GPU memory efficiency.")
 
     formatted_dataset = train_data.map(format_prompts, batched=True)
 
@@ -58,6 +61,9 @@ def main():
     is_cuda = torch.cuda.is_available()
     device_name = torch.cuda.get_device_name(0) if is_cuda else "CPU"
     print(f"🚀 Hardware Acceleration: {'CUDA GPU (' + device_name + ')' if is_cuda else 'CPU Host'}")
+
+    if is_cuda:
+        torch.cuda.empty_cache()
 
     # 4-bit NormalFloat quantization config for ~5.2 GB total VRAM usage
     bnb_config = BitsAndBytesConfig(
@@ -115,7 +121,7 @@ def main():
         use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
-        max_seq_length=128,
+        max_seq_length=96,
     )
 
     trainer = SFTTrainer(
