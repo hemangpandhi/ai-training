@@ -1,13 +1,13 @@
 """
-Phase 1: Fine-Tuning Google Gemma 4-E2B with PEFT LoRA (NVIDIA GPU Accelerated)
+Phase 1: Fine-Tuning Google Gemma 4-E2B with 4-bit QLoRA (Optimized for 8GB RTX 4070 VRAM)
 """
 
 import os
 import argparse
 import torch
 from datasets import load_dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from peft import LoraConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import LoraConfig, prepare_model_for_kbit_training
 from trl import SFTConfig, SFTTrainer
 
 SYSTEM_PROMPT_TEMPLATE = """CORE IDENTITY:
@@ -18,13 +18,13 @@ User: {user_input}
 Assistant: {output}"""
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Fine-tune Gemma 4-E2B using LoRA on GPU")
+    parser = argparse.ArgumentParser(description="Fine-tune Gemma 4-E2B using 4-bit QLoRA on GPU")
     parser.add_argument("--model_id", type=str, default="google/gemma-4-E2B-it", help="HuggingFace Base Model ID")
     parser.add_argument("--dataset_path", type=str, default="dataset/production_vehicle_dataset.json", help="Path to JSON dataset")
     parser.add_argument("--output_dir", type=str, default="in_car_gemma4_e2b_production_lora", help="Output directory for LoRA adapters")
     parser.add_argument("--epochs", type=int, default=3, help="Number of training epochs")
     parser.add_argument("--max_steps", type=int, default=-1, help="Max training steps (-1 for full epochs)")
-    parser.add_argument("--batch_size", type=int, default=4, help="Batch size per device")
+    parser.add_argument("--batch_size", type=int, default=2, help="Batch size per device")
     parser.add_argument("--lr", type=float, default=2e-4, help="Learning rate")
     return parser.parse_args()
 
@@ -41,7 +41,7 @@ def format_prompts(batch):
 def main():
     args = parse_args()
     print("=========================================================================")
-    print(f"  PHASE 1: GPU FINE-TUNING {args.model_id} ON {args.dataset_path}")
+    print(f"  PHASE 1: 4-BIT QLoRA GPU FINE-TUNING {args.model_id} ON {args.dataset_path}")
     print("=========================================================================\n")
 
     dataset = load_dataset("json", data_files=args.dataset_path)
@@ -56,14 +56,23 @@ def main():
     device_name = torch.cuda.get_device_name(0) if is_cuda else "CPU"
     print(f"🚀 Hardware Acceleration: {'CUDA GPU (' + device_name + ')' if is_cuda else 'CPU Host'}")
 
-    is_bf16_supported = is_cuda and torch.cuda.is_bf16_supported()
-    torch_dtype = torch.bfloat16 if is_bf16_supported else (torch.float16 if is_cuda else torch.float32)
+    # 4-bit NormalFloat quantization config for ~3.8 GB total VRAM usage
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_use_double_quant=True,
+    )
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_id,
-        dtype=torch_dtype,
+        quantization_config=bnb_config if is_cuda else None,
         device_map="auto" if is_cuda else "cpu"
     )
+
+    if is_cuda:
+        model = prepare_model_for_kbit_training(model)
+        model.gradient_checkpointing_enable()
 
     # Explicitly target language_model attention and MLP projection layers for Gemma 4
     target_modules = [
@@ -88,14 +97,15 @@ def main():
     sft_config = SFTConfig(
         output_dir=args.output_dir,
         per_device_train_batch_size=args.batch_size,
-        gradient_accumulation_steps=4,
+        gradient_accumulation_steps=8,
+        gradient_checkpointing=True,
         learning_rate=args.lr,
         num_train_epochs=args.epochs,
         max_steps=args.max_steps,
         logging_steps=10,
         save_strategy="epoch",
-        fp16=(is_cuda and not is_bf16_supported),
-        bf16=is_bf16_supported,
+        fp16=False,
+        bf16=is_cuda,
         use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
@@ -110,7 +120,7 @@ def main():
         args=sft_config,
     )
 
-    print(f"\nStarting GPU LoRA Fine-Tuning across {len(train_data):,} samples...")
+    print(f"\nStarting 4-bit QLoRA GPU Fine-Tuning across {len(train_data):,} samples...")
     trainer.train()
 
     trainer.model.save_pretrained(args.output_dir)
