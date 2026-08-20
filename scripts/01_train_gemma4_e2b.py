@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument("--output_dir", type=str, default="in_car_gemma4_e2b_production_lora", help="Output directory for LoRA adapters")
     parser.add_argument("--epochs", type=int, default=3, help="Number of training epochs")
     parser.add_argument("--max_steps", type=int, default=-1, help="Max training steps (-1 for full epochs)")
-    parser.add_argument("--batch_size", type=int, default=2, help="Batch size per device")
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch size per device")
     parser.add_argument("--lr", type=float, default=2e-4, help="Learning rate")
     return parser.parse_args()
 
@@ -56,7 +56,7 @@ def main():
     device_name = torch.cuda.get_device_name(0) if is_cuda else "CPU"
     print(f"🚀 Hardware Acceleration: {'CUDA GPU (' + device_name + ')' if is_cuda else 'CPU Host'}")
 
-    # 4-bit NormalFloat quantization config for ~3.8 GB total VRAM usage
+    # 4-bit NormalFloat quantization config for ~6.2 GB total VRAM usage
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
@@ -67,7 +67,7 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(
         args.model_id,
         quantization_config=bnb_config if is_cuda else None,
-        device_map="auto" if is_cuda else "cpu"
+        device_map={"": 0} if is_cuda else "cpu"
     )
 
     if is_cuda:
@@ -109,7 +109,7 @@ def main():
         use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
-        max_seq_length=512,
+        max_seq_length=256,
     )
 
     trainer = SFTTrainer(
