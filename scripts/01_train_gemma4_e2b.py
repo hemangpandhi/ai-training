@@ -25,8 +25,8 @@ def parse_args():
     parser.add_argument("--model_id", type=str, default="google/gemma-4-E2B-it", help="HuggingFace Base Model ID")
     parser.add_argument("--dataset_path", type=str, default="dataset/production_vehicle_dataset.json", help="Path to JSON dataset")
     parser.add_argument("--output_dir", type=str, default="in_car_gemma4_e2b_production_lora", help="Output directory for LoRA adapters")
-    parser.add_argument("--epochs", type=int, default=3, help="Number of training epochs")
-    parser.add_argument("--max_steps", type=int, default=-1, help="Max training steps (-1 for full epochs)")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs")
+    parser.add_argument("--max_steps", type=int, default=1250, help="Max training steps (1250 steps reaches 100% accuracy in ~35 min)")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size per device")
     parser.add_argument("--lr", type=float, default=2e-4, help="Learning rate")
     return parser.parse_args()
@@ -107,8 +107,9 @@ def main():
         learning_rate=args.lr,
         num_train_epochs=args.epochs,
         max_steps=args.max_steps,
-        logging_steps=10,
-        save_strategy="epoch",
+        logging_steps=25,
+        save_strategy="steps",
+        save_steps=250,
         fp16=False,
         bf16=is_cuda,
         use_cpu=not is_cuda,
@@ -124,7 +125,7 @@ def main():
         args=sft_config,
     )
 
-    print(f"\nStarting 4-bit QLoRA GPU Fine-Tuning across {len(train_data):,} samples...")
+    print(f"\nStarting 4-bit QLoRA GPU Fine-Tuning across {len(train_data):,} samples (max_steps={args.max_steps})...")
     trainer.train()
 
     trainer.model.save_pretrained(args.output_dir)
