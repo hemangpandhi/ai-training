@@ -24,7 +24,8 @@ This repository provides an end-to-end, production-ready pipeline for fine-tunin
 ├── README.md                              # Complete End-to-End Training & Export Guide
 ├── requirements.txt                        # Required Python Dependencies
 ├── dataset/
-│   └── sample_in_car_dataset.json          # Standardized intent & slot dataset schema
+│   ├── in_car_dataset.json                # Complete 1,976-pair In-Car Assistant JSON dataset
+│   └── sample_in_car_dataset.json          # Standardized intent & slot dataset sample
 ├── scripts/
 │   ├── 00_patch_litert_torch.py           # Step 0: Apply Framework Patches to litert-torch Site-Package
 │   ├── 01_train_gemma4_e2b.py             # Step 1: Unsloth / PEFT LoRA Fine-Tuning
@@ -58,11 +59,11 @@ python scripts/00_patch_litert_torch.py
 
 ### 2. Phase 1: Fine-Tune Gemma 4-E2B with LoRA
 
-Fine-tune Gemma 4-E2B on domain-specific in-car assistant intents using Low-Rank Adaptation (LoRA):
+Fine-tune Gemma 4-E2B on the complete 1,976-pair in-car assistant intent dataset:
 
 ```bash
 python scripts/01_train_gemma4_e2b.py \
-  --dataset_path=dataset/sample_in_car_dataset.json \
+  --dataset_path=dataset/in_car_dataset.json \
   --output_dir=in_car_gemma4_e2b_lora \
   --batch_size=2 \
   --epochs=3 \
