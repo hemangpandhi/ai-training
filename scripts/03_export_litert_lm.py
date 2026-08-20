@@ -11,12 +11,13 @@ def parse_args():
     parser.add_argument("--model_dir", type=str, default="gemma4_hf_merged", help="Merged HuggingFace model directory")
     parser.add_argument("--output_dir", type=str, default="litert_export", help="Output directory for LiteRT subgraphs")
     parser.add_argument("--quant_recipe", type=str, default="dynamic_wi4_afp32", help="Quantization recipe string")
+    parser.add_argument("--target_backend", type=str, default="gpu", help="Target accelerator backend (gpu, cpu)")
     return parser.parse_args()
 
 def main():
     args = parse_args()
     print("=========================================================================")
-    print(f"  PHASE 3: EXPORTING {args.model_dir} TO LITERT VIA LITERT-TORCH")
+    print(f"  PHASE 3: EXPORTING {args.model_dir} TO LITERT (BACKEND: {args.target_backend.upper()})")
     print("=========================================================================\n")
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -28,7 +29,8 @@ def main():
         f"--quantization_recipe={args.quant_recipe}",
         "--bundle_litert_lm=true",
         "--prefill_lengths=128,512,1024,2048,4096",
-        "--cache_length=4096"
+        "--cache_length=4096",
+        f"--aot_backend={args.target_backend}"
     ]
 
     print("Executing command:", " ".join(cmd))
