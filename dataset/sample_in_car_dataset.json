@@ -1,0 +1,27 @@
+[
+  {
+    "instruction": "Turn on the AC and set temperature to 68 degrees",
+    "input": "",
+    "output": "{\"intent\": \"SET_CLIMATE\", \"parameters\": {\"ac_on\": true, \"temperature_f\": 68}}"
+  },
+  {
+    "instruction": "I am feeling very cold, please turn up the heat",
+    "input": "",
+    "output": "{\"intent\": \"SET_CLIMATE\", \"parameters\": {\"ac_on\": true, \"temperature_f\": 74, \"fan_speed\": 4}}"
+  },
+  {
+    "instruction": "Open the driver window halfway",
+    "input": "",
+    "output": "{\"intent\": \"SET_WINDOW\", \"parameters\": {\"window\": \"driver\", \"position_pct\": 50}}"
+  },
+  {
+    "instruction": "Play my favorite driving playlist on Spotify",
+    "input": "",
+    "output": "{\"intent\": \"MEDIA_CONTROL\", \"parameters\": {\"action\": \"play\", \"source\": \"spotify\", \"playlist\": \"favorite driving\"}}"
+  },
+  {
+    "instruction": "Turn on seat heater for driver level 2",
+    "input": "",
+    "output": "{\"intent\": \"SET_SEAT_HEATER\", \"parameters\": {\"seat\": \"driver\", \"level\": 2}}"
+  }
+]

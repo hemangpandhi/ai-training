@@ -1,0 +1,11 @@
+torch>=2.2.0
+transformers>=4.40.0
+peft>=0.10.0
+datasets>=2.18.0
+trl>=0.8.0
+tflite>=2.14.0
+flatbuffers>=23.5.26
+numpy>=1.24.0
+ai-edge-torch>=0.2.0
+litert-torch>=0.1.0
+litert-lm>=0.1.0
