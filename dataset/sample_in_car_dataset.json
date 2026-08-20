@@ -2,26 +2,26 @@
   {
     "instruction": "Turn on the AC and set temperature to 68 degrees",
     "input": "",
-    "output": "{\"intent\": \"SET_CLIMATE\", \"parameters\": {\"ac_on\": true, \"temperature_f\": 68}}"
+    "output": "Setting the climate control AC on and temperature to 68 degrees for you. <TOOL>setTemperature(68)</TOOL><TOOL>turnOnAC()</TOOL>"
   },
   {
     "instruction": "I am feeling very cold, please turn up the heat",
     "input": "",
-    "output": "{\"intent\": \"SET_CLIMATE\", \"parameters\": {\"ac_on\": true, \"temperature_f\": 74, \"fan_speed\": 4}}"
+    "output": "I'm warming up the cabin for you right now! <TOOL>increaseTemperature(driver)</TOOL>"
   },
   {
     "instruction": "Open the driver window halfway",
     "input": "",
-    "output": "{\"intent\": \"SET_WINDOW\", \"parameters\": {\"window\": \"driver\", \"position_pct\": 50}}"
+    "output": "Opening the driver window to 50% position. <TOOL>setWindow(driver, 50)</TOOL>"
   },
   {
     "instruction": "Play my favorite driving playlist on Spotify",
     "input": "",
-    "output": "{\"intent\": \"MEDIA_CONTROL\", \"parameters\": {\"action\": \"play\", \"source\": \"spotify\", \"playlist\": \"favorite driving\"}}"
+    "output": "Playing your favorite driving playlist on Spotify now. <TOOL>playMusic(spotify, favorite driving)</TOOL>"
   },
   {
     "instruction": "Turn on seat heater for driver level 2",
     "input": "",
-    "output": "{\"intent\": \"SET_SEAT_HEATER\", \"parameters\": {\"seat\": \"driver\", \"level\": 2}}"
+    "output": "Turning on driver seat heater to level 2. <TOOL>setSeatHeater(driver, 2)</TOOL>"
   }
 ]
