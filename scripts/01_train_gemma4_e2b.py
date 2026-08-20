@@ -1,5 +1,5 @@
 """
-Phase 1: Fine-Tuning Google Gemma 4-E2B with Unsloth / PEFT LoRA
+Phase 1: Fine-Tuning Google Gemma 4-E2B with PEFT LoRA
 """
 
 import os
@@ -20,10 +20,10 @@ Assistant: {output}"""
 def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tune Gemma 4-E2B using LoRA")
     parser.add_argument("--model_id", type=str, default="google/gemma-4-E2B-it", help="HuggingFace Base Model ID")
-    parser.add_argument("--dataset_path", type=str, default="dataset/in_car_dataset.json", help="Path to JSON dataset")
-    parser.add_argument("--output_dir", type=str, default="in_car_gemma4_e2b_lora", help="Output directory for LoRA adapters")
+    parser.add_argument("--dataset_path", type=str, default="dataset/production_vehicle_dataset.json", help="Path to JSON dataset")
+    parser.add_argument("--output_dir", type=str, default="in_car_gemma4_e2b_production_lora", help="Output directory for LoRA adapters")
     parser.add_argument("--epochs", type=int, default=3, help="Number of training epochs")
-    parser.add_argument("--batch_size", type=int, default=2, help="Batch size per device")
+    parser.add_argument("--batch_size", type=int, default=4, help="Batch size per device")
     parser.add_argument("--lr", type=float, default=2e-4, help="Learning rate")
     return parser.parse_args()
 
@@ -55,10 +55,21 @@ def main():
         device_map="auto"
     )
 
+    # Explicitly target language_model attention and MLP projection layers for Gemma 4
+    target_modules = [
+        f"language_model.layers.{i}.self_attn.{proj}"
+        for i in range(35)
+        for proj in ["q_proj", "k_proj", "v_proj", "o_proj"]
+    ] + [
+        f"language_model.layers.{i}.mlp.{proj}"
+        for i in range(35)
+        for proj in ["gate_proj", "up_proj", "down_proj"]
+    ]
+
     peft_config = LoraConfig(
         r=16,
         lora_alpha=32,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+        target_modules=target_modules,
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM"
