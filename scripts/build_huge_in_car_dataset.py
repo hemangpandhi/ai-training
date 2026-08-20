@@ -1,122 +1,138 @@
 """
 Production-Grade High-Capacity Automotive AI Assistant Dataset Generator (>100,000 / >1 Lakh Samples)
-100% Synchronized with Android Automotive OS App & Vehicle Simulator (app.py) Presets & VHAL AIDL Properties.
+Includes Sightseeing, Travel Recommendations, Detailed Technical Explanations, Local Food, & General Knowledge.
 """
 
 import os
 import json
 import random
 
-# --- 1. CLIMATE, DUAL-ZONE & DEFROSTERS (VHAL 0x11600207, 291504647) ---
-CLIMATE_HANDLERS = [
-    ("Turn on the AC and set temperature to {temp} degrees", "Setting the AC on and cabin temperature to {temp} degrees for you. <TOOL>turnOnAC()</TOOL><TOOL>setTemperature(driver, {temp})</TOOL>"),
-    ("Set cabin temperature to {temp} degrees", "Adjusting cabin temperature to {temp} degrees. <TOOL>setTemperature(driver, {temp})</TOOL>"),
-    ("Set passenger side temperature to {temp} degrees", "Setting passenger temperature to {temp} degrees. <TOOL>setTemperature(passenger, {temp})</TOOL>"),
-    ("I am feeling freezing, crank up the heat to {temp}", "I am turning up the heat to {temp} degrees for you! <TOOL>setTemperature(driver, {temp})</TOOL>"),
-    ("Increase driver temperature by {delta} degrees", "Increasing driver cabin temperature by {delta} degrees. <TOOL>increaseTemperature(driver, {delta})</TOOL>"),
-    ("Decrease temperature by {delta} degrees", "Lowering cabin temperature by {delta} degrees. <TOOL>decreaseTemperature(driver, {delta})</TOOL>"),
-    ("Set fan speed to level {level}", "Setting fan speed to level {level}. <TOOL>setFanSpeed({level})</TOOL>"),
-    ("Turn on air recirculation", "Enabling cabin air recirculation. <TOOL>setAirRecirculation(true)</TOOL>"),
-    ("Turn on front windshield defroster", "Activating front windshield defroster. <TOOL>turnOnFrontDefroster()</TOOL>"),
-    ("Turn on rear window defroster", "Activating rear window defroster. <TOOL>turnOnRearDefroster()</TOOL>"),
+# --- 1. SIGHTSEEING, TRAVEL RECOMMENDATIONS & DETAILED EXPLANATIONS ---
+SIGHTSEEING_TRAVEL = [
+    (
+        "What are the top places to visit in {city}?",
+        "Here are top recommended places to visit in {city}:\n1. {attraction1}: Known for scenic views, historical significance, and vibrant atmosphere.\n2. {attraction2}: A famous landmark offering fantastic photo opportunities, dining, and cultural exhibits.\n3. {attraction3}: A beautiful park and relaxation spot perfect for a scenic walk or afternoon break.\nEnjoy your visit, and let me know if you would like navigation directions to any of these locations!"
+    ),
+    (
+        "Can you recommend sightseeing spots around {city}?",
+        "Certainly! Great sightseeing spots near {city} include {attraction1}, {attraction2}, and {attraction3}. Each offers unique sights, local history, and memorable experiences for travelers."
+    ),
+    (
+        "Recommend some good local food and dining spots near {city}",
+        "Near {city}, you'll find fantastic dining options! I recommend trying local favorites like {cuisine} at popular spots near {attraction1} or relaxed dining near {attraction2}."
+    ),
 ]
 
-# --- 2. SEAT HEATERS & COOLERS (VHAL 356517131) ---
-SEAT_HANDLERS = [
-    ("Turn on driver seat heater to level {level}", "Turning on driver seat heater to level {level}. <TOOL>setSeatHeater(driver, {level})</TOOL>"),
-    ("Turn on passenger seat heater to level {level}", "Setting passenger seat heater to level {level}. <TOOL>setSeatHeater(passenger, {level})</TOOL>"),
-    ("Turn on rear left seat heater to level {level}", "Setting rear left seat heater to level {level}. <TOOL>setSeatHeater(rear_left, {level})</TOOL>"),
-    ("Turn on rear right seat heater to level {level}", "Setting rear right seat heater to level {level}. <TOOL>setSeatHeater(rear_right, {level})</TOOL>"),
-    ("Turn on driver seat cooler to level {level}", "Setting driver seat cooling to level {level}. <TOOL>setSeatCooler(driver, {level})</TOOL>"),
-    ("Turn on passenger seat cooler to level {level}", "Setting passenger seat cooling to level {level}. <TOOL>setSeatCooler(passenger, {level})</TOOL>"),
-    ("Turn on heated steering wheel", "Activating heated steering wheel. <TOOL>setSteeringWheelHeater(true)</TOOL>"),
+TECHNICAL_EXPLANATIONS = [
+    (
+        "How does regenerative braking work in an electric vehicle?",
+        "Regenerative braking in an EV converts kinetic energy back into electrical energy during deceleration. When you lift your foot off the accelerator or apply gentle braking, the electric motor reverses its operation to act as a generator, capturing energy that would otherwise be lost as heat and storing it back into the high-voltage battery to extend your driving range."
+    ),
+    (
+        "Explain how adaptive cruise control works",
+        "Adaptive Cruise Control (ACC) uses front-facing radar and camera sensors to automatically maintain a safe distance from the vehicle ahead. If traffic slows down, ACC automatically reduces your speed; when the road clears, it smoothly accelerates back to your set cruising speed."
+    ),
+    (
+        "What should I do if my tire pressure warning light comes on while driving?",
+        "If your TPMS tire pressure warning light comes on:\n1. Maintain firm control of the steering wheel and reduce your speed smoothly.\n2. Pull over safely to check all four tires for visible punctures or deflation.\n3. Use a tire pressure gauge or check the vehicle status display to verify PSI levels before driving to the nearest service station."
+    ),
+    (
+        "How does lane keep assist help the driver?",
+        "Lane Keep Assist uses windshield cameras to track road lane markings. If the system detects your vehicle drifting out of its lane without an active turn signal, it gently nudges the steering wheel or alerts you to keep your vehicle safely centered."
+    ),
 ]
 
-# --- 3. WINDOWS, SUNROOF, DOORS & LOCKS (VHAL 322964416, 371198722) ---
-WINDOW_DOOR_HANDLERS = [
-    ("Open driver window halfway", "Opening driver window to 50%. <TOOL>setWindow(driver, 50)</TOOL>"),
-    ("Roll down passenger window to {pct} percent", "Opening passenger window to {pct}%. <TOOL>setWindow(passenger, {pct})</TOOL>"),
-    ("Open windows slightly for fresh air", "Opening all windows slightly for fresh air. <TOOL>openWindowsSlightly(20)</TOOL>"),
-    ("Close all windows completely", "Closing all windows securely. <TOOL>closeWindowsCompletely()</TOOL>"),
-    ("Open the sunroof halfway", "Opening sunroof halfway. <TOOL>openSunroof(50)</TOOL>"),
-    ("Tilt the sunroof open", "Tilting sunroof open for ventilation. <TOOL>tiltSunroof()</TOOL>"),
-    ("Close the sunroof", "Closing the sunroof completely. <TOOL>closeSunroof()</TOOL>"),
-    ("Lock all doors", "Locking all vehicle doors. <TOOL>lockDoors()</TOOL>"),
-    ("Unlock the doors", "Unlocking vehicle doors. <TOOL>unlockDoors()</TOOL>"),
-    ("Open the trunk", "Opening the rear trunk. <TOOL>openTrunk()</TOOL>"),
-    ("Open the frunk front trunk", "Opening the front trunk. <TOOL>openFrunk()</TOOL>"),
-    ("Enable rear child safety locks", "Activating child safety door locks. <TOOL>setChildLock(all, true)</TOOL>"),
-]
-
-# --- 4. LIGHTING & HEADLIGHTS (VHAL Headlight Modes) ---
+# --- 2. VEHICLE HARDWARE & CONTROL DOMAINS ---
 LIGHTING_HANDLERS = [
     ("Turn on headlights", "Turning on headlights. <TOOL>turnOnHeadlights()</TOOL>"),
-    ("Set headlights to auto", "Enabling automatic lighting control. <TOOL>setAutoHeadlights()</TOOL>"),
+    ("Turn off headlights", "Turning off headlights. <TOOL>turnOffHeadlights()</TOOL>"),
+    ("Set headlights to auto", "Enabling automatic rain and light sensing headlight control. <TOOL>setAutoHeadlights()</TOOL>"),
     ("Turn on high beams", "Activating high beam headlights. <TOOL>turnOnHighBeams()</TOOL>"),
-    ("Turn off high beams", "Switching high beam headlights back to low beams. <TOOL>turnOffHighBeams()</TOOL>"),
     ("Set ambient lighting to {color}", "Setting cabin ambient lighting to {color}. <TOOL>setAmbientLighting({color})</TOOL>"),
-    ("Turn on hazard warning lights", "Activating hazard flasher lights. <TOOL>setHazardLights(true)</TOOL>"),
 ]
 
-# --- 5. TELEMATICS, TPMS & EV BATTERY (VHAL 392168201, 291504905) ---
-TELEMATICS_HANDLERS = [
-    ("What is my tire pressure?", "Reading tire pressure sensors: Front Left 35 PSI, Front Right 35 PSI, Rear Left 35 PSI, Rear Right 35 PSI. <TOOL>checkTirePressure()</TOOL>"),
-    ("How much fuel do I have left?", "Reading fuel level telemetry. <TOOL>checkFuelLevel()</TOOL>"),
-    ("What is my remaining battery range?", "Checking EV battery telemetry: 85% charge remaining, estimated range 236 miles. <TOOL>checkBatteryRange()</TOOL>"),
-    ("Is engine health okay?", "Running vehicle diagnostic scan: No OBD fault codes detected. <TOOL>checkEngineStatus()</TOOL>"),
-    ("When is my next service required?", "Checking maintenance schedule telemetry. <TOOL>checkServiceInterval()</TOOL>"),
+SUNROOF_HANDLERS = [
+    ("Open the sunroof", "Opening the sunroof for you. <TOOL>openSunroof(100)</TOOL>"),
+    ("Tilt the sunroof open", "Tilting sunroof open for ventilation. <TOOL>tiltSunroof()</TOOL>"),
+    ("Close the sunroof", "Closing the sunroof completely. <TOOL>closeSunroof()</TOOL>"),
 ]
 
-# --- 6. SIMULATOR PRESET COMMANDS (app.py Presets) ---
-SIMULATOR_PRESETS_HANDLERS = [
-    ("Apply Trip Ready preset", "Engaging Trip Ready preset: 92% battery, 72°F cabin temperature, all systems nominal. <TOOL>applyPreset(trip_ready)</TOOL>"),
-    ("Simulate low tire leak", "Simulating Low Tire Leak preset: Warning TPMS Rear Left 22 PSI. <TOOL>applyPreset(low_tire_leak)</TOOL>"),
-    ("Simulate rain and fog weather", "Applying Rain & Fog preset: Defroster engaged, headlights on LOW. <TOOL>applyPreset(rain_fog)</TOOL>"),
-    ("Simulate OBD engine fault code", "Simulating OBD fault code P0300 Random Misfire. <TOOL>applyPreset(obd_fault)</TOOL>"),
-    ("Engage Sport Launch mode", "Engaging Sport Launch performance preset: 75 MPH in Drive. <TOOL>applyPreset(sport_launch)</TOOL>"),
+SEAT_HEAT_COOL_HANDLERS = [
+    ("Turn on driver seat heater level {level}", "Turning on driver seat heater to level {level}. <TOOL>setSeatHeater(driver, {level})</TOOL>"),
+    ("Turn on passenger seat cooler level {level}", "Setting passenger seat cooling to level {level}. <TOOL>setSeatCooler(passenger, {level})</TOOL>"),
+    ("Turn off driver seat heater", "Turning off driver seat heater. <TOOL>setSeatHeater(driver, 0)</TOOL>"),
 ]
 
-# --- 7. CALENDAR & MEETINGS (CalendarToolHandler.kt) ---
+DOOR_LOCK_HANDLERS = [
+    ("Lock all doors", "Locking all vehicle doors securely. <TOOL>lockDoors()</TOOL>"),
+    ("Unlock all doors", "Unlocking all vehicle doors. <TOOL>unlockDoors()</TOOL>"),
+    ("Open the trunk", "Opening the rear trunk. <TOOL>openTrunk()</TOOL>"),
+    ("Open the frunk front trunk", "Opening the front trunk. <TOOL>openFrunk()</TOOL>"),
+]
+
+WINDOW_HANDLERS = [
+    ("Open driver window halfway", "Opening driver window to 50%. <TOOL>setWindow(driver, 50)</TOOL>"),
+    ("Roll down driver window", "Rolling down driver window completely. <TOOL>setWindow(driver, 100)</TOOL>"),
+    ("Open windows slightly for fresh air", "Opening all windows slightly for fresh air. <TOOL>openWindowsSlightly(20)</TOOL>"),
+    ("Close all windows completely", "Closing all windows securely. <TOOL>closeWindowsCompletely()</TOOL>"),
+]
+
+HVAC_DEFROST_HANDLERS = [
+    ("Turn on the AC and set temperature to {temp} degrees", "Setting the AC on and cabin temperature to {temp} degrees for you. <TOOL>turnOnAC()</TOOL><TOOL>setTemperature(driver, {temp})</TOOL>"),
+    ("Set cabin temperature to {temp} degrees", "Adjusting cabin temperature to {temp} degrees. <TOOL>setTemperature(driver, {temp})</TOOL>"),
+    ("Turn on front windshield defroster", "Activating front windshield defroster. <TOOL>turnOnFrontDefroster()</TOOL>"),
+    ("Turn on rear window defroster", "Activating rear window defroster. <TOOL>turnOnRearDefroster()</TOOL>"),
+    ("Set fan speed to level {level}", "Setting fan speed to level {level}. <TOOL>setFanSpeed({level})</TOOL>"),
+]
+
 CALENDAR_HANDLERS = [
     ("Search my calendar for {topic}", "Searching your calendar for {topic}. <TOOL>searchEvents(topic={topic})</TOOL>"),
-    ("Do I have any meetings with {contact} today?", "Checking your calendar for meetings with {contact} today. <TOOL>searchEvents(topic={contact}, date=today)</TOOL>"),
     ("List all my upcoming meetings for today", "Here are your scheduled meetings for today. <TOOL>listEvents(date=today)</TOOL>"),
-    ("Am I free tomorrow morning around {time_str}?", "Checking your calendar availability for tomorrow morning at {time_str}. <TOOL>checkAvailability(date=tomorrow, time={time_str})</TOOL>"),
-    ("Get details for the meeting with {contact}", "Retrieving event details for your meeting with {contact}. <TOOL>getEventDetails(topic={contact})</TOOL>"),
     ("Schedule a meeting titled {topic} with {contact} at {time_str} tomorrow", "Scheduling meeting {topic} with {contact} for {time_str} tomorrow. <TOOL>createEvent(title={topic}, contact={contact}, date=tomorrow, time={time_str})</TOOL>"),
-    ("Cancel my meeting with {contact}", "Canceling your meeting with {contact}. <TOOL>deleteEvent(match={contact})</TOOL>"),
     ("Join my online meeting now", "Opening your online meeting link now. <TOOL>joinMeeting()</TOOL>"),
-    ("Navigate to my next meeting location", "Starting navigation to your next meeting's physical location. <TOOL>navigateMeeting()</TOOL>"),
 ]
 
-# --- 8. MEDIA, NAV, PHONE & ADAS ---
-MEDIA_NAV_PHONE_HANDLERS = [
+MEDIA_NAV_EV_HANDLERS = [
     ("Play {artist} on Spotify", "Playing {artist} on Spotify now. <TOOL>playMusic(spotify, {artist})</TOOL>"),
     ("Pause the music", "Pausing audio playback. <TOOL>pauseMusic()</TOOL>"),
     ("Navigate to {destination}", "Starting navigation route to {destination}. <TOOL>navigate({destination})</TOOL>"),
     ("Find nearest EV charger", "Locating available EV fast chargers nearby. <TOOL>findPointsOfInterest(ev_charger)</TOOL>"),
+    ("Start charging the vehicle", "Initiating EV charging session. <TOOL>startCharging()</TOOL>"),
+    ("What is my tire pressure?", "Reading tire pressure sensors. <TOOL>checkTirePressure()</TOOL>"),
+    ("What is my remaining battery range?", "Checking EV battery state of charge. <TOOL>checkBatteryRange()</TOOL>"),
     ("Call {contact}", "Calling {contact} now. <TOOL>callContact({contact})</TOOL>"),
-    ("Send text to {contact} saying {msg}", "Sending text message to {contact}. <TOOL>sendText({contact}, {msg})</TOOL>"),
-    ("Show 360 surround camera view", "Displaying 360 degree surround view camera. <TOOL>showCameraFeed(surround_360)</TOOL>"),
-    ("Enable sentry security mode", "Enabling Sentry Mode vehicle security. <TOOL>enableSentryMode(true)</TOOL>"),
 ]
 
-# Random sampling dictionaries
-TOPICS = ["Design Review", "Project Sync", "Budget Planning", "Engineering Standup", "Quarterly Review", "Client Call", "Product Roadmap"]
-CONTACTS = ["Wife", "Mom", "John Smith", "Boss", "David", "Sarah", "Alex", "Emily", "Dad"]
-DESTINATIONS = ["San Francisco Airport", "123 Market Street", "Home", "Office Downtown", "Starbucks Coffee", "Target Superstore", "Yosemite National Park"]
-ARTISTS = ["Taylor Swift", "The Weeknd", "Coldplay", "Daft Punk", "Miles Davis", "Drake", "Ed Sheeran", "Billie Eilish"]
-MESSAGES = ["I am driving home now", "Running 5 minutes late", "Heading to the office", "Pick up groceries on the way"]
-COLORS = ["blue", "red", "purple", "cyan", "green", "warm_white", "amber"]
-TIMES = ["9:00 AM", "10:30 AM", "2:00 PM", "4:15 PM", "5:00 PM", "6:30 PM"]
-
-ALL_SIMULATOR_DOMAINS = [
-    CLIMATE_HANDLERS, SEAT_HANDLERS, WINDOW_DOOR_HANDLERS, LIGHTING_HANDLERS,
-    TELEMATICS_HANDLERS, SIMULATOR_PRESETS_HANDLERS, CALENDAR_HANDLERS, MEDIA_NAV_PHONE_HANDLERS
+IDENTITY_CONVERSATIONAL = [
+    ("Who are you?", "I am your in-car AI Assistant and co-pilot. I am here to help you with vehicle controls, navigation, music, calls, and travel recommendations."),
+    ("What can you do in this car?", "I am your vehicle AI co-pilot! I can adjust climate, control windows and sunroof, play music, set navigation, check tire pressure and battery range, make calls, and execute vehicle diagnostics."),
 ]
 
-def generate_simulator_synchronized_dataset(output_path="dataset/production_vehicle_dataset.json", total_samples=100000):
-    print(f"Generating 100,000+ items dataset strictly synchronized with Android App & Vehicle Simulator (app.py)...")
+# Random sampling dictionaries for sightseeing
+CITIES = [
+    ("San Francisco", "Golden Gate Bridge", "Fisherman's Wharf", "Golden Gate Park", "artisan seafood"),
+    ("Tokyo", "Senso-ji Temple", "Tokyo Tower", "Shinjuku Gyoen National Garden", "authentic ramen and sushi"),
+    ("Paris", "Eiffel Tower", "Louvre Museum", "Notre-Dame Cathedral", "fresh croissants and French bistro cuisine"),
+    ("New York City", "Central Park", "Times Square", "Statue of Liberty", "New York style pizza"),
+    ("London", "Big Ben", "Tower Bridge", "Hyde Park", "traditional fish and chips"),
+    ("Kyoto", "Fushimi Inari Shrine", "Arashiyama Bamboo Grove", "Kinkaku-ji Golden Pavilion", "traditional Kaiseki dining"),
+]
+
+TOPICS = ["Design Review", "Project Sync", "Budget Planning", "Engineering Standup", "Quarterly Review"]
+CONTACTS = ["Wife", "Mom", "John Smith", "Boss", "David", "Sarah", "Alex"]
+DESTINATIONS = ["San Francisco Airport", "123 Market Street", "Home", "Office Downtown", "Starbucks Coffee"]
+ARTISTS = ["Taylor Swift", "The Weeknd", "Coldplay", "Daft Punk", "Miles Davis"]
+COLORS = ["blue", "red", "purple", "cyan", "green", "warm_white"]
+TIMES = ["9:00 AM", "10:30 AM", "2:00 PM", "4:15 PM", "5:00 PM"]
+
+ALL_VEHICLE_DOMAINS = [
+    SIGHTSEEING_TRAVEL, TECHNICAL_EXPLANATIONS, LIGHTING_HANDLERS, SUNROOF_HANDLERS,
+    SEAT_HEAT_COOL_HANDLERS, DOOR_LOCK_HANDLERS, WINDOW_HANDLERS, HVAC_DEFROST_HANDLERS,
+    CALENDAR_HANDLERS, MEDIA_NAV_EV_HANDLERS, IDENTITY_CONVERSATIONAL
+]
+
+def generate_complete_vehicle_dataset(output_path="dataset/production_vehicle_dataset.json", total_samples=100000):
+    print(f"Generating 100,000+ items dataset covering Sightseeing, Detailed Q&A, Headlights, Sunroof, Seat Heaters, Doors, Windows, HVAC & Calendar...")
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
     sys_instruction = """CORE IDENTITY:
@@ -127,32 +143,33 @@ CRITICAL RULE: All tool tags MUST be placed sequentially at the VERY END of your
 
     dataset = []
     for i in range(total_samples):
-        domain = random.choice(ALL_SIMULATOR_DOMAINS)
+        domain = random.choice(ALL_VEHICLE_DOMAINS)
         item = random.choice(domain)
         template, resp_template = item
+
+        city_data = random.choice(CITIES)
+        city, attr1, attr2, attr3, cuisine = city_data[0], city_data[1], city_data[2], city_data[3], city_data[4]
 
         temp = random.randint(62, 78)
         delta = random.randint(1, 5)
         level = random.randint(1, 3)
-        pct = random.choice([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
         topic = random.choice(TOPICS)
         contact = random.choice(CONTACTS)
         dest = random.choice(DESTINATIONS)
         artist = random.choice(ARTISTS)
-        msg = random.choice(MESSAGES)
         color = random.choice(COLORS)
         time_str = random.choice(TIMES)
 
         user_text = template.format(
-            temp=temp, delta=delta, level=level, pct=pct,
-            topic=topic, contact=contact, destination=dest, artist=artist,
-            msg=msg, color=color, time_str=time_str
+            city=city, attraction1=attr1, attraction2=attr2, attraction3=attr3, cuisine=cuisine,
+            temp=temp, delta=delta, level=level, topic=topic, contact=contact,
+            destination=dest, artist=artist, color=color, time_str=time_str
         )
 
         output_text = resp_template.format(
-            temp=temp, delta=delta, level=level, pct=pct,
-            topic=topic, contact=contact, destination=dest, artist=artist,
-            msg=msg, color=color, time_str=time_str
+            city=city, attraction1=attr1, attraction2=attr2, attraction3=attr3, cuisine=cuisine,
+            temp=temp, delta=delta, level=level, topic=topic, contact=contact,
+            destination=dest, artist=artist, color=color, time_str=time_str
         )
 
         entry = {
@@ -166,7 +183,7 @@ CRITICAL RULE: All tool tags MUST be placed sequentially at the VERY END of your
         json.dump(dataset, f, indent=2)
 
     size_mb = os.path.getsize(output_path) / (1024 * 1024)
-    print(f"✅ Successfully generated {len(dataset):,} items ({size_mb:.2f} MB) synchronized with Android app & Vehicle Simulator at: {output_path}")
+    print(f"✅ Successfully generated {len(dataset):,} items ({size_mb:.2f} MB) covering Sightseeing, Detailed Q&A, Vehicle Controls & Calendar at: {output_path}")
 
 if __name__ == "__main__":
-    generate_simulator_synchronized_dataset()
+    generate_complete_vehicle_dataset()
