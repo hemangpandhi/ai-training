@@ -4,7 +4,7 @@
 [![Target Platform](https://img.shields.io/badge/Platform-Android_Automotive_OS_|_Pixel_Tablet-green.svg)]()
 [![Inference Engine](https://img.shields.io/badge/Engine-LiteRT_LM_|_OpenCL_GPU-blue.svg)]()
 
-This repository provides an end-to-end, production-ready pipeline for fine-tuning **Google Gemma 4-E2B** models, exporting them to **Google LiteRT (AI Edge Torch)**, fixing FlatBuffer container alignments, and running hardware-accelerated OpenCL GPU inference with **Speculative Decoding (MTP)** on Android devices.
+This repository provides an end-to-end, production-ready pipeline for fine-tuning **Google Gemma 4-E2B** models, patching the **`litert-torch`** exporter framework, exporting to **Google LiteRT (AI Edge Torch)**, fixing FlatBuffer container alignments, and running hardware-accelerated OpenCL GPU inference with **Speculative Decoding (MTP)** on Android devices.
 
 ---
 
@@ -26,6 +26,7 @@ This repository provides an end-to-end, production-ready pipeline for fine-tunin
 ├── dataset/
 │   └── sample_in_car_dataset.json          # Standardized intent & slot dataset schema
 ├── scripts/
+│   ├── 00_patch_litert_torch.py           # Step 0: Apply Framework Patches to litert-torch Site-Package
 │   ├── 01_train_gemma4_e2b.py             # Step 1: Unsloth / PEFT LoRA Fine-Tuning
 │   ├── 02_merge_lora_weights.py           # Step 2: Merge LoRA Checkpoint into Full HuggingFace Weights
 │   ├── 03_export_litert_lm.py             # Step 3: Export HuggingFace Model to LiteRT TFLite
@@ -34,6 +35,7 @@ This repository provides an end-to-end, production-ready pipeline for fine-tunin
 │   └── 06_android_ui_automation.py        # Step 6: Automated ADB UI Verification & Model Loader
 └── docs/
     ├── ARCHITECTURE_AND_SPECIFICATIONS.md  # Detailed LiteRT Container & Section Specifications
+    ├── LITERT_TORCH_FRAMEWORK_PATCHES.md   # Explanation of litert-torch Exporter Executable Patches
     ├── SPECULATIVE_DECODING_MTP_GUIDE.md   # Multi-Token Prediction (MTP) Drafter Setup
     └── TROUBLESHOOTING_AND_LOGCAT.md       # Diagnostic Guide for FlatBuffer & Tensor Errors
 ```
@@ -42,12 +44,15 @@ This repository provides an end-to-end, production-ready pipeline for fine-tunin
 
 ## ⚡ Quick Start Pipeline
 
-### 1. Installation
+### 1. Installation & Framework Patching
 
 ```bash
 git clone https://github.com/hemangpandhi/ai-training.git
 cd ai-training
 pip install -r requirements.txt
+
+# IMPORTANT: Apply required tensor name canonicalization and JAX lowering shape patches to litert-torch
+python scripts/00_patch_litert_torch.py
 ```
 
 ### 2. Phase 1: Fine-Tune Gemma 4-E2B with LoRA
@@ -114,6 +119,14 @@ adb push in_car_assistant_gemma4_e2b_pixel_int4.litertlm /data/local/tmp/
 # Run automated Android UI model selection & load test
 python scripts/06_android_ui_automation.py
 ```
+
+---
+
+## 🛠️ Essential Framework Patches Explained
+
+See [`docs/LITERT_TORCH_FRAMEWORK_PATCHES.md`](docs/LITERT_TORCH_FRAMEWORK_PATCHES.md) for details on why `litert-torch` requires these 2 patches:
+1. **Tensor Name Canonicalization (`litert_converter.py`)**: Strips dynamic sub-module prefixes (`decode_`, `prefill_128_`, `kv_slice_` $\rightarrow$ `kv_cache_`) so the C++ engine can locate input/output tensors.
+2. **JAX Tensor Shape Padding (`lowerings.py`)**: Prevents dimension broadcast mismatch errors during MLIR ATen operator lowerings.
 
 ---
 
