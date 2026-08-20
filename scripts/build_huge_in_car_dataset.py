@@ -1,8 +1,10 @@
 """
-Production-Grade Automotive Edge AI Assistant Dataset Generator
-Generates a 10,000-sample complete dataset covering all 14 vehicle control HAL tool categories.
+Production-Grade High-Capacity Automotive AI Assistant Dataset Generator (>100,000 / >1 Lakh Samples)
+Generates a comprehensive dataset with complex edge cases, multi-intent compound commands, negations, 
+safety overrides, and out-of-domain queries.
 """
 
+import os
 import json
 import random
 
@@ -23,7 +25,7 @@ CLIMATE_HAL = [
 
 WINDOWS_DOORS_HAL = [
     ("Open the driver window halfway", "Opening driver window to 50%. <TOOL>setWindow(driver, 50)</TOOL>"),
-    ("Roll down passenger window 20 percent", "Opening passenger window to 20%. <TOOL>setWindow(passenger, 20)</TOOL>"),
+    ("Roll down passenger window {pct} percent", "Opening passenger window to {pct}%. <TOOL>setWindow(passenger, {pct})</TOOL>"),
     ("Roll down all windows completely", "Opening all windows completely. <TOOL>setWindow(all, 100)</TOOL>"),
     ("Close all windows", "Closing all windows securely. <TOOL>setWindow(all, 0)</TOOL>"),
     ("Open the sunroof halfway", "Opening sunroof halfway. <TOOL>setSunroof(50)</TOOL>"),
@@ -31,7 +33,7 @@ WINDOWS_DOORS_HAL = [
     ("Lock all doors", "Locking all vehicle doors. <TOOL>lockDoors()</TOOL>"),
     ("Unlock the doors", "Unlocking vehicle doors. <TOOL>unlockDoors()</TOOL>"),
     ("Open the trunk", "Opening the trunk for you. <TOOL>openTrunk()</TOOL>"),
-    ("Open the front trunk frunk", "Opening the front trunk. <TOOL>openFrunk()</TOOL>"),
+    ("Open the frunk", "Opening the front trunk. <TOOL>openFrunk()</TOOL>"),
     ("Enable rear child locks", "Activating child safety door locks. <TOOL>setChildLock(all, true)</TOOL>"),
 ]
 
@@ -122,31 +124,49 @@ PARKING_SECURITY_HAL = [
     ("Enable valet mode", "Activating Valet Mode restrictions. <TOOL>setValetMode(true)</TOOL>"),
 ]
 
-IDENTITY_CONVERSATIONAL = [
-    ("Who are you?", "I am your in-car AI Assistant and co-pilot. I am here to help you with vehicle controls, navigation, music, calls, and travel recommendations."),
-    ("What can you do in this car?", "I am your vehicle AI co-pilot! I can adjust climate, control windows and sunroof, play music, set navigation, check tire pressure and battery range, make calls, and execute vehicle diagnostics."),
-    ("What are you doing?", "I am your vehicle AI co-pilot, monitoring telematics and ready to assist you on your drive."),
+# --- EDGE CASES: COMPOUND COMMANDS, NEGATIONS & NOISY INPUTS ---
+
+EDGE_CASES_COMPOUND = [
+    ("I am freezing and it's too dark in here, turn heat to {temp} and turn on ambient light to {color}", "Turning up the heat to {temp} degrees and setting ambient lighting to {color}. <TOOL>setTemperature(driver, {temp})</TOOL><TOOL>setAmbientLightingColor({color})</TOOL>"),
+    ("I'm feeling sleepy, open driver window 20 percent and play upbeat {genre} music", "Opening driver window to 20% for fresh air and playing {genre} music. <TOOL>setWindow(driver, 20)</TOOL><TOOL>playMusic(genre, {genre})</TOOL>"),
+    ("Take me to {destination} and turn on driver seat heater level {level}", "Setting navigation to {destination} and turning on driver seat heater level {level}. <TOOL>setDestination({destination})</TOOL><TOOL>setSeatHeater(driver, {level})</TOOL>"),
+    ("Don't open the sunroof, just turn on the AC and set temperature to {temp}", "Keeping sunroof closed. Turning on AC and setting temperature to {temp} degrees. <TOOL>turnOnAC()</TOOL><TOOL>setTemperature(driver, {temp})</TOOL>"),
+    ("Stop navigation and mute the sound", "Canceling navigation route and muting audio. <TOOL>cancelNavigation()</TOOL><TOOL>muteAudio()</TOOL>"),
 ]
 
-# Random sampling dictionaries
-DESTINATIONS = ["San Francisco Airport", "123 Market Street", "Home", "Office", "Starbucks Coffee", "Target Supercenter", "Yosemite National Park"]
-ARTISTS = ["Taylor Swift", "The Weeknd", "Coldplay", "Daft Punk", "Miles Davis", "Drake", "Ed Sheeran", "Billie Eilish"]
-GENRES = ["jazz", "rock", "lo-fi driving", "pop", "hip hop", "chill", "classical"]
-CONTACTS = ["Wife", "Mom", "John Smith", "Boss", "David", "Sarah", "Alex"]
-MESSAGES = ["I am driving home now", "Running 5 minutes late", "Heading to the office", "Pick up groceries"]
-COLORS = ["blue", "red", "purple", "cyan", "green", "warm_white", "amber"]
-TASKS = ["buy milk", "pick up dry cleaning", "call mechanic", "check tire pressure"]
-TIMES = ["5:00 PM", "7:30 AM", "tomorrow morning", "in 1 hour"]
+EDGE_CASES_INFORMAL = [
+    ("Yo assistant, blast the AC to max cool", "Blasting max cooling AC for you now! <TOOL>turnOnAC()</TOOL><TOOL>setTemperature(driver, 62)</TOOL><TOOL>setFanSpeed(7)</TOOL>"),
+    ("Gotta charge up to {charge_pct} percent real quick", "Setting battery charge limit to {charge_pct}%. <TOOL>setChargeLimit({charge_pct})</TOOL>"),
+    ("Can't see anything behind me", "Displaying rear backup camera feed. <TOOL>showCameraFeed(backup_rear)</TOOL>"),
+    ("It's getting too loud in here", "Lowering audio volume for you. <TOOL>decreaseVolume()</TOOL>"),
+]
+
+OUT_OF_DOMAIN_QUERIES = [
+    ("What is the capital of France?", "The capital of France is Paris."),
+    ("Tell me a funny joke", "Why don't scientists trust atoms? Because they make up everything!"),
+    ("What is the speed of light?", "The speed of light in a vacuum is approximately 299,792 kilometers per second (about 186,282 miles per second)."),
+]
+
+DESTINATIONS = ["San Francisco Airport", "123 Market Street", "Home", "Office Downtown", "Starbucks Coffee", "Target Supercenter", "Yosemite National Park", "Palo Alto", "San Jose Convention Center"]
+ARTISTS = ["Taylor Swift", "The Weeknd", "Coldplay", "Daft Punk", "Miles Davis", "Drake", "Ed Sheeran", "Billie Eilish", "Post Malone", "Kanye West"]
+GENRES = ["jazz", "rock", "lo-fi driving", "pop", "hip hop", "chill", "classical", "synthwave", "country"]
+CONTACTS = ["Wife", "Mom", "John Smith", "Boss", "David", "Sarah", "Alex", "Emily", "Dad"]
+MESSAGES = ["I am driving home now", "Running 5 minutes late", "Heading to the office", "Pick up groceries on the way", "On my way!"]
+COLORS = ["blue", "red", "purple", "cyan", "green", "warm_white", "amber", "magenta", "orange"]
+TASKS = ["buy milk", "pick up dry cleaning", "call mechanic", "check tire pressure", "schedule car wash"]
+TIMES = ["5:00 PM", "7:30 AM", "tomorrow morning", "in 1 hour", "at 6:00 PM"]
 
 ALL_HAL_DOMAINS = [
     CLIMATE_HAL, WINDOWS_DOORS_HAL, MEDIA_AUDIO_HAL, NAVIGATION_HAL,
     TELEMATICS_DIAGNOSTICS_HAL, DRIVE_MODES_POWERTRAIN_HAL, LIGHTING_AMBIANCE_HAL,
     PHONE_HANDSFREE_HAL, CALENDAR_PRODUCTIVITY_HAL, ADAS_SAFETY_CAMERAS_HAL,
-    EV_CHARGING_HAL, MIRRORS_WIPERS_HAL, PARKING_SECURITY_HAL, IDENTITY_CONVERSATIONAL
+    EV_CHARGING_HAL, MIRRORS_WIPERS_HAL, PARKING_SECURITY_HAL,
+    EDGE_CASES_COMPOUND, EDGE_CASES_INFORMAL, OUT_OF_DOMAIN_QUERIES
 ]
 
-def generate_production_dataset(output_path="dataset/production_vehicle_dataset.json", total_samples=10000):
-    dataset = []
+def generate_production_dataset(output_path="dataset/production_vehicle_dataset.json", total_samples=100000):
+    print(f"Generating high-capacity production dataset with {total_samples:,} items...")
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
     sys_instruction = """CORE IDENTITY:
 You are the driver's smart in-car AI Assistant and co-pilot. You help with vehicle controls (AC, temperature, windows, seat heaters, defrosters), navigation, music playback, phone calls, vehicle diagnostics, and travel suggestions. NEVER refer to yourself as a generic large language model or describe text processing algorithms.
@@ -154,13 +174,19 @@ PERSONALITY: Act as a warm, helpful, and direct in-car AI co-pilot.
 
 CRITICAL RULE: All tool tags MUST be placed sequentially at the VERY END of your response, after you finish speaking."""
 
+    dataset = []
     for i in range(total_samples):
         domain = random.choice(ALL_HAL_DOMAINS)
         item = random.choice(domain)
-        template, resp_template = item
+        
+        if len(item) == 2:
+            template, resp_template = item
+        else:
+            template, resp_template = item[0], item[1]
 
-        temp = random.randint(62, 78)
+        temp = random.randint(60, 80)
         level = random.randint(1, 3)
+        pct = random.choice([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
         vol_pct = random.randint(10, 90)
         radio_fm = random.choice(["98.1", "101.5", "104.5", "105.3", "88.5"])
         dest = random.choice(DESTINATIONS)
@@ -176,14 +202,14 @@ CRITICAL RULE: All tool tags MUST be placed sequentially at the VERY END of your
         time_str = random.choice(TIMES)
 
         user_text = template.format(
-            temp=temp, level=level, vol_pct=vol_pct, radio_fm=radio_fm,
+            temp=temp, level=level, pct=pct, vol_pct=vol_pct, radio_fm=radio_fm,
             destination=dest, artist=artist, genre=genre, contact=contact,
             msg=msg, color=color, brightness_pct=brightness_pct, speed_mph=speed_mph,
             charge_pct=charge_pct, task=task, time_str=time_str
         )
 
         output_text = resp_template.format(
-            temp=temp, level=level, vol_pct=vol_pct, radio_fm=radio_fm,
+            temp=temp, level=level, pct=pct, vol_pct=vol_pct, radio_fm=radio_fm,
             destination=dest, artist=artist, genre=genre, contact=contact,
             msg=msg, color=color, brightness_pct=brightness_pct, speed_mph=speed_mph,
             charge_pct=charge_pct, task=task, time_str=time_str
@@ -199,7 +225,8 @@ CRITICAL RULE: All tool tags MUST be placed sequentially at the VERY END of your
     with open(output_path, "w") as f:
         json.dump(dataset, f, indent=2)
 
-    print(f"✅ Generated Production Automotive Dataset with {len(dataset)} items at: {output_path}")
+    size_mb = os.path.getsize(output_path) / (1024 * 1024)
+    print(f"✅ Successfully generated {len(dataset):,} items ({size_mb:.2f} MB) at: {output_path}")
 
 if __name__ == "__main__":
     generate_production_dataset()
