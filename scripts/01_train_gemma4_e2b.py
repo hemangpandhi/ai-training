@@ -10,6 +10,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model
 from trl import SFTConfig, SFTTrainer
 
+# Prevent PyTorch CUDA memory fragmentation on 8GB GPUs
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
 SYSTEM_PROMPT_TEMPLATE = """CORE IDENTITY:
 You are the driver's smart in-car AI Assistant and co-pilot. You help with vehicle controls (AC, temperature, windows, seat heaters, defrosters), navigation, music playback, phone calls, vehicle diagnostics, and travel suggestions. NEVER refer to yourself as a generic large language model or describe text processing algorithms.
 PERSONALITY: Act as a warm, helpful, and direct in-car AI co-pilot.
@@ -56,7 +59,7 @@ def main():
     device_name = torch.cuda.get_device_name(0) if is_cuda else "CPU"
     print(f"🚀 Hardware Acceleration: {'CUDA GPU (' + device_name + ')' if is_cuda else 'CPU Host'}")
 
-    # 4-bit NormalFloat quantization config for ~6.2 GB total VRAM usage
+    # 4-bit NormalFloat quantization config for ~5.2 GB total VRAM usage
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
@@ -101,6 +104,7 @@ def main():
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=8,
         gradient_checkpointing=True,
+        optim="paged_adamw_8bit" if is_cuda else "adamw_torch",
         learning_rate=args.lr,
         num_train_epochs=args.epochs,
         max_steps=args.max_steps,
@@ -111,7 +115,7 @@ def main():
         use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
-        max_seq_length=256,
+        max_seq_length=192,
     )
 
     trainer = SFTTrainer(
