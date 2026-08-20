@@ -31,7 +31,7 @@ This repository provides an end-to-end, production-ready pipeline for fine-tunin
 │   ├── 02_merge_lora_weights.py           # Step 2: Merge LoRA Checkpoint into Full HuggingFace Weights
 │   ├── 03_export_litert_lm.py             # Step 3: Export HuggingFace Model to LiteRT TFLite
 │   ├── 04_fix_subgraphs_and_signatures.py # Step 4: Fix Subgraph Array & SignatureDef FlatBuffer Offsets
-│   ├── 05_build_and_pack_container.py     # Step 5: Assemble model.toml & Pack MTP .litertlm Bundle
+│   ├── 05_build_and_pack_container.py     # Step 5: Extract Official Assets & Pack MTP .litertlm Bundle
 │   ├── 06_android_ui_automation.py        # Step 6: Automated ADB UI Verification & Model Loader
 │   └── 07_inject_weights_into_baseline.py # Utility 7: Direct Weight Buffer Transposition into Baseline Model
 └── docs/
@@ -100,13 +100,14 @@ python scripts/04_fix_subgraphs_and_signatures.py \
   --tflite_path=litert_export/Section2_TFLiteModel_tf_lite_prefill_decode.tflite
 ```
 
-### 6. Phase 5: Build & Pack `.litertlm` Container
+### 6. Phase 5: Extract Official Baseline Assets & Pack `.litertlm` Container
 
-Assemble `model.toml`, sentencepiece tokenizer, embedder, and MTP drafter into the final container bundle:
+Assemble `model.toml`, sentencepiece tokenizer, single-subgraph embedders, and MTP drafter from the official Gemma 4 baseline container:
 
 ```bash
 python scripts/05_build_and_pack_container.py \
   --bundle_dir=litert_export \
+  --official_baseline_container=/path/to/gemma-4-E2B-it.litertlm \
   --output_path=in_car_assistant_gemma4_e2b_pixel_int4.litertlm
 ```
 
