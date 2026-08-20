@@ -1,5 +1,5 @@
 """
-Phase 1: Fine-Tuning Google Gemma 4-E2B with PEFT LoRA (GPU Accelerated - RTX 4070)
+Phase 1: Fine-Tuning Google Gemma 4-E2B with PEFT LoRA (CPU Optimized Fast Convergence)
 """
 
 import os
@@ -22,8 +22,9 @@ def parse_args():
     parser.add_argument("--model_id", type=str, default="google/gemma-4-E2B-it", help="HuggingFace Base Model ID")
     parser.add_argument("--dataset_path", type=str, default="dataset/production_vehicle_dataset.json", help="Path to JSON dataset")
     parser.add_argument("--output_dir", type=str, default="in_car_gemma4_e2b_production_lora", help="Output directory for LoRA adapters")
-    parser.add_argument("--epochs", type=int, default=3, help="Number of training epochs")
-    parser.add_argument("--batch_size", type=int, default=4, help="Batch size per device")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs")
+    parser.add_argument("--max_steps", type=int, default=100, help="Max training steps for fast CPU convergence")
+    parser.add_argument("--batch_size", type=int, default=2, help="Batch size per device")
     parser.add_argument("--lr", type=float, default=2e-4, help="Learning rate")
     return parser.parse_args()
 
@@ -44,16 +45,18 @@ def main():
     print("=========================================================================\n")
 
     dataset = load_dataset("json", data_files=args.dataset_path)
-    formatted_dataset = dataset["train"].map(format_prompts, batched=True)
+    train_data = dataset["train"].shuffle(seed=42)
+    if len(train_data) > 2000:
+        train_data = train_data.select(range(2000))
+        print(f"Sampled 2,000 diverse automotive items from {len(dataset['train']):,} total items for fast CPU convergence.")
+
+    formatted_dataset = train_data.map(format_prompts, batched=True)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
     tokenizer.pad_token = tokenizer.eos_token
 
     is_cuda = torch.cuda.is_available()
-    device_name = torch.cuda.get_device_name(0) if is_cuda else "CPU"
-    print(f"🚀 Hardware Acceleration: {'CUDA GPU (' + device_name + ')' if is_cuda else 'CPU Host'}")
-
-    torch_dtype = torch.bfloat16 if (is_cuda and torch.cuda.is_bf16_supported()) else (torch.float16 if is_cuda else torch.float32)
+    torch_dtype = torch.float16 if is_cuda else torch.float32
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_id,
@@ -84,13 +87,14 @@ def main():
     sft_config = SFTConfig(
         output_dir=args.output_dir,
         per_device_train_batch_size=args.batch_size,
-        gradient_accumulation_steps=4,
+        gradient_accumulation_steps=2,
         learning_rate=args.lr,
-        num_train_epochs=args.epochs,
+        max_steps=args.max_steps,
         logging_steps=10,
-        save_strategy="epoch",
-        fp16=(is_cuda and not torch.cuda.is_bf16_supported()),
-        bf16=(is_cuda and torch.cuda.is_bf16_supported()),
+        save_strategy="steps",
+        save_steps=50,
+        fp16=is_cuda,
+        bf16=False,
         use_cpu=not is_cuda,
         report_to="none",
         dataset_text_field="text",
@@ -105,7 +109,7 @@ def main():
         args=sft_config,
     )
 
-    print("\nStarting LoRA Fine-Tuning...")
+    print(f"\nStarting LoRA Fine-Tuning (Target: {args.max_steps} steps)...")
     trainer.train()
 
     trainer.model.save_pretrained(args.output_dir)
